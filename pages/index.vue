@@ -86,6 +86,53 @@ function strToUtf8Array(str) {
   return bytes;
 }
 
+// https://tutorialmore.com/questions-1371393.htm
+function utf8ArrayToStr(array) {
+  var out, i, len, c;
+  var char2, char3, char4;
+  out = "";
+  len = array.length;
+  i = 0;
+  while (i < len) {
+    c = array[i++];
+    switch (c >> 4) {
+      case 0:
+      case 1:
+      case 2:
+      case 3:
+      case 4:
+      case 5:
+      case 6:
+      case 7:
+        // 0xxxxxxx
+        out += String.fromCharCode(c);
+        break;
+      case 12:
+      case 13:
+        // 110x xxxx   10xx xxxx
+        char2 = array[i++];
+        out += String.fromCharCode(((c & 0x1F) << 6) | (char2 & 0x3F));
+        break;
+      case 14:
+        // 1110 xxxx  10xx xxxx  10xx xxxx
+        char2 = array[i++];
+        char3 = array[i++];
+        out += String.fromCharCode(((c & 0x0F) << 12) |
+          ((char2 & 0x3F) << 6) |
+          ((char3 & 0x3F) << 0));
+        break;
+      case 15:
+        // 1111 0xxx 10xx xxxx 10xx xxxx 10xx xxxx
+        char2 = array[i++];
+        char3 = array[i++];
+        char4 = array[i++];
+        out += String.fromCodePoint(((c & 0x07) << 18) | ((char2 & 0x3F) << 12) | ((char3 & 0x3F) << 6) | (char4 & 0x3F));
+        break;
+    }
+  }
+  return out;
+}
+
 export default Vue.extend({
   data() {
     return {
@@ -138,10 +185,14 @@ export default Vue.extend({
         const unzip = new Unzip(new Uint8Array(reader.result));
         const fileNames = unzip.getFilenames();
 
-        const zipFileInfoList = fileNames.map((fileName) => ({
-          fileName,
-          binaryData: unzip.decompress(fileName),
-        }));
+        const zipFileInfoList = fileNames.map((fileName) => {
+          const charCodes = fileName.split('').map((char) => char.charCodeAt(0));
+          console.log('文字コード：', Encoding.detect(charCodes));
+          return {
+            fileName: utf8ArrayToStr(Encoding.convert(charCodes, 'UTF8')),
+            binaryData: unzip.decompress(fileName),
+          };
+        });
 
         if (label === 'A') {
           this.$data.zipFileInfoListA = zipFileInfoList;
