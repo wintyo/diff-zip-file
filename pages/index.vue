@@ -44,6 +44,7 @@ const { Zip } = require('zlibjs/bin/zip.min').Zlib;
 import File from '../utils/File';
 
 import UnzipWorker from '~/worker/unzip.worker.js';
+import ZipWorker from '~/worker/zip.worker.js';
 
 /**
  * 配列データが一緒か調べる
@@ -95,7 +96,7 @@ function strToUtf8Array(str) {
 /**
  * 解凍する
  * @param data - workerに渡すデータ
- * @param callbacks - コールバック関数
+ * @param callbacks - コールバック関数群
  */
 function unzip(data, callbacks = {}) {
   const worker = new UnzipWorker();
@@ -106,6 +107,27 @@ function unzip(data, callbacks = {}) {
       callbacks.progress && callbacks.progress(event.data);
     }
 
+    if (status === 'complete') {
+      callbacks.complete && callbacks.complete(event.data);
+      worker.terminate();
+    }
+  });
+  worker.postMessage(data);
+}
+
+/**
+ * 圧縮する
+ * @param data - workerに送るデータ
+ * @param callbacks - コールバック関数群
+ */
+function zip(data, callbacks = {}) {
+  const worker = new ZipWorker();
+  worker.addEventListener('message', (event) => {
+    const { status } = event.data;
+
+    if (status === 'progress') {
+      callbacks.progress && callbacks.progress(event.data);
+    }
     if (status === 'complete') {
       callbacks.complete && callbacks.complete(event.data);
       worker.terminate();
@@ -189,18 +211,19 @@ export default Vue.extend({
       reader.readAsArrayBuffer(file);
     },
     onDownloadButtonClick() {
-      const zip = new Zip();
-
-      this.$data.zipFileInfoListB
+      const zipFiles = this.$data.zipFileInfoListB
         .filter((fileInfo) => ['add', 'change'].includes(this._diffZipFileMap[fileInfo.fileName]))
-        .forEach((fileInfo) => {
-          zip.addFile(fileInfo.binaryData, {
-            filename: strToUtf8Array(fileInfo.fileName),
-          });
-        });
-      const compressData = zip.compress();
+        .map((fileInfo) => ({
+          ...fileInfo,
+          fileName: `changed/${fileInfo.fileName}`,
+        }));
 
-      File.download('diff.zip', compressData, 'application/zip');
+      zip({ zipFiles }, {
+        complete: (data) => {
+          const { compressData } = data;
+          File.download('diff.zip', compressData, 'application/zip');
+        },
+      });
     },
   },
 });
