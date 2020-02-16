@@ -69,6 +69,10 @@ self.addEventListener('message', (event) => {
     };
   });
 
+  zipFileInfoList.sort((a, b) => {
+    return (a.fileName > b.fileName) ? 1 : -1;
+  });
+
   self.postMessage({
     status: 'complete',
     zipFileInfoList,
