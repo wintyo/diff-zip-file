@@ -2,10 +2,12 @@
 div
   .zip-upload
     .zip-upload__block
+      div BEFORE
       input(
         type="file"
         @change="(event) => { onUpload(event, 'A'); }"
       )
+      span progress: {{ $data.progressA }}
       ul.file-list
         template(v-for="fileInfo in $data.zipFileInfoListA")
           li.file-list__item(
@@ -15,10 +17,12 @@ div
           )
             | {{ fileInfo.fileName }}
     .zip-upload__block
+      div AFTER
       input(
         type="file"
         @change="(event) => { onUpload(event, 'B'); }"
       )
+      span progress: {{ $data.progressB }}
       ul.file-list
         template(v-for="fileInfo in $data.zipFileInfoListB")
           li.file-list__item(
@@ -38,6 +42,8 @@ import Vue from 'vue';
 const { Unzip } = require('zlibjs/bin/unzip.min').Zlib;
 const { Zip } = require('zlibjs/bin/zip.min').Zlib;
 import File from '../utils/File';
+
+import UnzipWorker from '~/worker/unzip.worker.js';
 
 /**
  * 配列データが一緒か調べる
@@ -86,51 +92,24 @@ function strToUtf8Array(str) {
   return bytes;
 }
 
-// https://tutorialmore.com/questions-1371393.htm
-function utf8ArrayToStr(array) {
-  var out, i, len, c;
-  var char2, char3, char4;
-  out = "";
-  len = array.length;
-  i = 0;
-  while (i < len) {
-    c = array[i++];
-    switch (c >> 4) {
-      case 0:
-      case 1:
-      case 2:
-      case 3:
-      case 4:
-      case 5:
-      case 6:
-      case 7:
-        // 0xxxxxxx
-        out += String.fromCharCode(c);
-        break;
-      case 12:
-      case 13:
-        // 110x xxxx   10xx xxxx
-        char2 = array[i++];
-        out += String.fromCharCode(((c & 0x1F) << 6) | (char2 & 0x3F));
-        break;
-      case 14:
-        // 1110 xxxx  10xx xxxx  10xx xxxx
-        char2 = array[i++];
-        char3 = array[i++];
-        out += String.fromCharCode(((c & 0x0F) << 12) |
-          ((char2 & 0x3F) << 6) |
-          ((char3 & 0x3F) << 0));
-        break;
-      case 15:
-        // 1111 0xxx 10xx xxxx 10xx xxxx 10xx xxxx
-        char2 = array[i++];
-        char3 = array[i++];
-        char4 = array[i++];
-        out += String.fromCodePoint(((c & 0x07) << 18) | ((char2 & 0x3F) << 12) | ((char3 & 0x3F) << 6) | (char4 & 0x3F));
-        break;
+/**
+ * 解凍する
+ */
+function unzip(data, callbacks = {}) {
+  const worker = new UnzipWorker();
+  worker.addEventListener('message', (event) => {
+    const { status } = event.data;
+
+    if (status === 'progress') {
+      callbacks.progress && callbacks.progress(event.data);
     }
-  }
-  return out;
+
+    if (status === 'complete') {
+      callbacks.complete && callbacks.complete(event.data);
+      worker.terminate();
+    }
+  });
+  worker.postMessage(data);
 }
 
 export default Vue.extend({
@@ -138,6 +117,8 @@ export default Vue.extend({
     return {
       zipFileInfoListA: [],
       zipFileInfoListB: [],
+      progressA: '',
+      progressB: '',
     }
   },
   computed: {
@@ -182,23 +163,25 @@ export default Vue.extend({
         if (!reader.result) {
           return;
         }
-        const unzip = new Unzip(new Uint8Array(reader.result));
-        const fileNames = unzip.getFilenames();
 
-        const zipFileInfoList = fileNames.map((fileName) => {
-          const charCodes = fileName.split('').map((char) => char.charCodeAt(0));
-          console.log('文字コード：', Encoding.detect(charCodes));
-          return {
-            fileName: utf8ArrayToStr(Encoding.convert(charCodes, 'UTF8')),
-            binaryData: unzip.decompress(fileName),
-          };
+        unzip({ fileBinary: new Uint8Array(reader.result) }, {
+          progress: (data) => {
+            const progress = `${data.loaded}/${data.total}`;
+            if (label === 'A') {
+              this.$data.progressA = progress;
+            } else {
+              this.$data.progressB = progress;
+            }
+          },
+          complete: (data) => {
+            const { zipFileInfoList } = data;
+            if (label === 'A') {
+              this.$data.zipFileInfoListA = zipFileInfoList;
+            } else {
+              this.$data.zipFileInfoListB = zipFileInfoList;
+            }
+          },
         });
-
-        if (label === 'A') {
-          this.$data.zipFileInfoListA = zipFileInfoList;
-        } else {
-          this.$data.zipFileInfoListB = zipFileInfoList;
-        }
       };
 
       reader.readAsArrayBuffer(file);
@@ -215,7 +198,7 @@ export default Vue.extend({
         });
       const compressData = zip.compress();
 
-      File.download('sample.zip', compressData, 'application/zip');
+      File.download('diff.zip', compressData, 'application/zip');
     },
   },
 });
