@@ -211,14 +211,28 @@ export default Vue.extend({
       reader.readAsArrayBuffer(file);
     },
     onDownloadButtonClick() {
-      const zipFiles = this.$data.zipFileInfoListB
+      const zipAddFiles = this.$data.zipFileInfoListB
         .filter((fileInfo) => ['add', 'change'].includes(this._diffZipFileMap[fileInfo.fileName]))
         .map((fileInfo) => ({
           ...fileInfo,
           fileName: `changed/${fileInfo.fileName}`,
         }));
 
-      zip({ zipFiles }, {
+      const zipDeleteFileNames = this.$data.zipFileInfoListA
+        .filter((fileInfo) => ['delete'].includes(this._diffZipFileMap[fileInfo.fileName]))
+        .map((fileInfo) => fileInfo.fileName);
+
+      const data = {
+        zipFiles: [
+          ...zipAddFiles,
+          {
+            fileName: 'deleteFileNames.txt',
+            binaryData: strToUtf8Array(zipDeleteFileNames.join('\n')),
+          },
+        ],
+      };
+
+      zip(data, {
         complete: (data) => {
           const { compressData } = data;
           File.download('diff.zip', compressData, 'application/zip');
