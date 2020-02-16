@@ -94,6 +94,8 @@ function strToUtf8Array(str) {
 
 /**
  * 解凍する
+ * @param data - workerに渡すデータ
+ * @param callbacks - コールバック関数
  */
 function unzip(data, callbacks = {}) {
   const worker = new UnzipWorker();
