@@ -37,8 +37,8 @@ div
       | 差分ダウンロード
 </template>
 
-<script>
-import Vue from 'vue';
+<script lang="ts">
+import { TypedVue } from '@wintyo/typed-vue';
 const { Unzip } = require('zlibjs/bin/unzip.min').Zlib;
 const { Zip } = require('zlibjs/bin/zip.min').Zlib;
 import File from '../utils/File';
@@ -52,7 +52,7 @@ import ZipWorker from '~/worker/zip.worker.js';
  * @param arr2
  * @returns {boolean}
  */
-function checkSameArray(arr1, arr2) {
+function checkSameArray(arr1: Uint8Array, arr2: Uint8Array) {
   if (arr1.length !== arr2.length) {
     return false;
   }
@@ -66,7 +66,7 @@ function checkSameArray(arr1, arr2) {
   return true;
 }
 
-function strToUtf8Array(str) {
+function strToUtf8Array(str: string): Array<number> {
   var n = str.length,
     idx = -1,
     bytes = [],
@@ -98,9 +98,10 @@ function strToUtf8Array(str) {
  * @param data - workerに渡すデータ
  * @param callbacks - コールバック関数群
  */
-function unzip(data, callbacks = {}) {
+function unzip(data: any, callbacks: any = {}) {
+  // @ts-ignore
   const worker = new UnzipWorker();
-  worker.addEventListener('message', (event) => {
+  worker.addEventListener('message', (event: any) => {
     const { status } = event.data;
 
     if (status === 'progress') {
@@ -120,9 +121,10 @@ function unzip(data, callbacks = {}) {
  * @param data - workerに送るデータ
  * @param callbacks - コールバック関数群
  */
-function zip(data, callbacks = {}) {
+function zip(data: any, callbacks: any = {}) {
+  // @ts-ignore
   const worker = new ZipWorker();
-  worker.addEventListener('message', (event) => {
+  worker.addEventListener('message', (event: any) => {
     const { status } = event.data;
 
     if (status === 'progress') {
@@ -136,8 +138,32 @@ function zip(data, callbacks = {}) {
   worker.postMessage(data);
 }
 
-export default Vue.extend({
-  data() {
+/** ファイル情報 */
+interface IFileInfo {
+  /** ファイル名 */
+  fileName: string;
+  /** バイナリデータ */
+  binaryData: Uint8Array;
+}
+
+/** 差分情報 */
+interface IDiffStatusMap {
+  [fileName: string]: 'same' | 'add' | 'change' | 'delete';
+}
+
+interface IData {
+  /** ZIP展開後のファイル一覧その１ */
+  zipFileInfoListA: Array<IFileInfo>;
+  /** ZIP展開後のファイル一覧その２ */
+  zipFileInfoListB: Array<IFileInfo>;
+  /** その１の展開の進捗 */
+  progressA: string;
+  /** その２の展開の進捗 */
+  progressB: string;
+}
+
+export default TypedVue.typedExtend({
+  data(): IData {
     return {
       zipFileInfoListA: [],
       zipFileInfoListB: [],
@@ -147,8 +173,8 @@ export default Vue.extend({
   },
   computed: {
     // 差分情報を返す
-    _diffZipFileMap() {
-      const diffZipFileMap = {};
+    _diffZipFileMap(): IDiffStatusMap {
+      const diffZipFileMap: IDiffStatusMap = {};
       this.$data.zipFileInfoListA.forEach((fileInfoA) => {
         const fileInfoB = this.$data.zipFileInfoListB.find((fileInfoB) => fileInfoA.fileName === fileInfoB.fileName);
         if (!fileInfoB) {
@@ -176,7 +202,7 @@ export default Vue.extend({
      * @param event - イベント
      * @param label - ラベル
      */
-    onUpload(event, label) {
+    onUpload(event: any, label: string) {
       if (!event.currentTarget.files) {
         return;
       }
@@ -188,8 +214,8 @@ export default Vue.extend({
           return;
         }
 
-        unzip({ fileBinary: new Uint8Array(reader.result) }, {
-          progress: (data) => {
+        unzip({ fileBinary: new Uint8Array(reader.result as ArrayBuffer) }, {
+          progress: (data: any) => {
             const progress = `${data.loaded}/${data.total}`;
             if (label === 'A') {
               this.$data.progressA = progress;
@@ -197,7 +223,7 @@ export default Vue.extend({
               this.$data.progressB = progress;
             }
           },
-          complete: (data) => {
+          complete: (data: any) => {
             const { zipFileInfoList } = data;
             if (label === 'A') {
               this.$data.zipFileInfoListA = zipFileInfoList;
@@ -233,7 +259,7 @@ export default Vue.extend({
       };
 
       zip(data, {
-        complete: (data) => {
+        complete: (data: any) => {
           const { compressData } = data;
           File.download('diff.zip', compressData, 'application/zip');
         },

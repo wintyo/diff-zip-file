@@ -5,17 +5,22 @@
   "author": "",
   "private": true,
   "scripts": {
-    "dev": "nuxt",
-    "build": "nuxt build",
-    "start": "nuxt start",
-    "generate": "cross-env DEPLOY_ENV=GH_PAGES nuxt generate"
+    "dev": "nuxt-ts",
+    "build": "nuxt-ts build",
+    "start": "nuxt-ts start",
+    "generate": "cross-env DEPLOY_ENV=GH_PAGES nuxt-ts generate"
   },
   "dependencies": {
+    "@nuxt/typescript-runtime": "^0.4.2",
     "@nuxtjs/pwa": "^3.0.0-0",
+    "@wintyo/typed-vue": "^0.0.2",
     "nuxt": "^2.0.0",
+    "ts-loader": "^6.2.2",
+    "typescript": "^3.8.3",
     "zlibjs": "^0.3.1"
   },
   "devDependencies": {
+    "@nuxt/typescript-build": "^0.6.2",
     "cross-env": "^7.0.0",
     "node-sass": "^4.13.1",
     "pug": "^2.0.4",

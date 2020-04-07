@@ -1,10 +1,12 @@
+import { Configuration } from '@nuxt/types';
+
 const routerBase = process.env.DEPLOY_ENV === 'GH_PAGES' ? {
   router: {
     base: '/diff-zip-file/'
   }
 } : {};
 
-export default {
+const nuxtConfig: Configuration = {
   ...routerBase,
   mode: 'spa',
   /*
@@ -37,11 +39,13 @@ export default {
   ** Plugins to load before mounting the App
   */
   plugins: [
+    '@/plugins/typed-vue',
   ],
   /*
   ** Nuxt.js dev-modules
   */
   buildModules: [
+    '@nuxt/typescript-build'
   ],
   /*
   ** Nuxt.js modules
@@ -57,12 +61,16 @@ export default {
     ** You can extend webpack config here
     */
     extend (config, ctx) {
-      config.module.rules.push({
-        test: /\.worker\.js/,
-        use: {
-          loader: 'worker-loader',
-        },
-      });
+      if (config.module) {
+        config.module.rules.push({
+          test: /\.worker\.js/,
+          use: {
+            loader: 'worker-loader',
+          },
+        });
+      }
     },
   }
 }
+
+export default nuxtConfig;
