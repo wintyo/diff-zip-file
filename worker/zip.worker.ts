@@ -1,6 +1,6 @@
 const { Zip } = require('zlibjs/bin/zip.min').Zlib;
 
-function strToUtf8Array(str) {
+function strToUtf8Array(str: string) {
   var n = str.length,
     idx = -1,
     bytes = [],
@@ -27,7 +27,18 @@ function strToUtf8Array(str) {
   return bytes;
 }
 
-self.addEventListener('message', (event) => {
+interface IMessageEvent extends MessageEvent {
+  data: {
+    zipFiles: Array<{
+      fileName: string;
+      binaryData: Uint8Array;
+    }>;
+  }
+}
+
+const ctx: Worker = self as any;
+
+ctx.addEventListener('message', (event: IMessageEvent) => {
   const { zipFiles } = event.data;
 
   const zip = new Zip();
@@ -38,8 +49,10 @@ self.addEventListener('message', (event) => {
     });
   });
 
-  self.postMessage({
+  ctx.postMessage({
     status: 'complete',
     compressData: zip.compress(),
   });
 });
+
+export default ctx;

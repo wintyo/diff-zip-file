@@ -43,8 +43,8 @@ const { Unzip } = require('zlibjs/bin/unzip.min').Zlib;
 const { Zip } = require('zlibjs/bin/zip.min').Zlib;
 import File from '../utils/File';
 
-import UnzipWorker from '~/worker/unzip.worker.js';
-import ZipWorker from '~/worker/zip.worker.js';
+import UnzipWorker from 'worker-loader!~/worker/unzip.worker.ts';
+import ZipWorker from 'worker-loader!~/worker/zip.worker.ts';
 
 /**
  * 配列データが一緒か調べる
@@ -98,8 +98,7 @@ function strToUtf8Array(str: string): Array<number> {
  * @param data - workerに渡すデータ
  * @param callbacks - コールバック関数群
  */
-function unzip(data: any, callbacks: any = {}) {
-  // @ts-ignore
+function unzip(data: { fileBinary: Uint8Array }, callbacks: any = {}) {
   const worker = new UnzipWorker();
   worker.addEventListener('message', (event: any) => {
     const { status } = event.data;
@@ -121,8 +120,10 @@ function unzip(data: any, callbacks: any = {}) {
  * @param data - workerに送るデータ
  * @param callbacks - コールバック関数群
  */
-function zip(data: any, callbacks: any = {}) {
-  // @ts-ignore
+function zip(
+  data: { zipFiles: Array<{ fileName: string, binaryData: Uint8Array | Array<number> }> },
+  callbacks: any = {}
+) {
   const worker = new ZipWorker();
   worker.addEventListener('message', (event: any) => {
     const { status } = event.data;

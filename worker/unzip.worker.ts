@@ -1,9 +1,10 @@
+// @ts-ignore
 importScripts('https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/1.0.30/encoding.min.js');
 
 const { Unzip } = require('zlibjs/bin/unzip.min').Zlib;
 
 // https://tutorialmore.com/questions-1371393.htm
-function utf8ArrayToStr(array) {
+function utf8ArrayToStr(array: any) {
   var out, i, len, c;
   var char2, char3, char4;
   out = "";
@@ -49,21 +50,25 @@ function utf8ArrayToStr(array) {
   return out;
 }
 
-self.addEventListener('message', (event) => {
+const ctx: Worker = self as any;
+
+ctx.addEventListener('message', (event) => {
   const { fileBinary } = event.data;
 
   const unzip = new Unzip(fileBinary);
-  const fileNames = unzip.getFilenames();
+  const fileNames: Array<string> = unzip.getFilenames();
 
   const zipFileInfoList = fileNames.map((fileName, index) => {
     const charCodes = fileName.split('').map((char) => char.charCodeAt(0));
+    // @ts-ignore
     console.log('文字コード：', Encoding.detect(charCodes));
-    self.postMessage({
+    ctx.postMessage({
       status: 'progress',
       loaded: index + 1,
       total: fileNames.length,
     });
     return {
+      // @ts-ignore
       fileName: utf8ArrayToStr(Encoding.convert(charCodes, 'UTF8')),
       binaryData: unzip.decompress(fileName),
     };
@@ -73,8 +78,10 @@ self.addEventListener('message', (event) => {
     return (a.fileName > b.fileName) ? 1 : -1;
   });
 
-  self.postMessage({
+  ctx.postMessage({
     status: 'complete',
     zipFileInfoList,
   });
 });
+
+export default ctx;
