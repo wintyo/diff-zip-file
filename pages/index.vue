@@ -98,7 +98,13 @@ function strToUtf8Array(str: string): Array<number> {
  * @param data - workerに渡すデータ
  * @param callbacks - コールバック関数群
  */
-function unzip(data: { fileBinary: Uint8Array }, callbacks: any = {}) {
+function unzip(
+  data: { fileBinary: Uint8Array },
+  callbacks: {
+    progress?: (data: { loaded: number, total: number }) => void;
+    complete?: (data: { zipFileInfoList: Array<IFileInfo> }) => void;
+  } = {}
+) {
   const worker = new UnzipWorker();
   worker.addEventListener('message', (event: any) => {
     const { status } = event.data;
@@ -122,7 +128,10 @@ function unzip(data: { fileBinary: Uint8Array }, callbacks: any = {}) {
  */
 function zip(
   data: { zipFiles: Array<{ fileName: string, binaryData: Uint8Array | Array<number> }> },
-  callbacks: any = {}
+  callbacks: {
+    progress?: (data: any) => void;
+    complete?: (data: { compressData: Uint8Array }) => void;
+  } = {}
 ) {
   const worker = new ZipWorker();
   worker.addEventListener('message', (event: any) => {
@@ -216,7 +225,7 @@ export default TypedVue.typedExtend({
         }
 
         unzip({ fileBinary: new Uint8Array(reader.result as ArrayBuffer) }, {
-          progress: (data: any) => {
+          progress: (data) => {
             const progress = `${data.loaded}/${data.total}`;
             if (label === 'A') {
               this.$data.progressA = progress;
@@ -224,7 +233,7 @@ export default TypedVue.typedExtend({
               this.$data.progressB = progress;
             }
           },
-          complete: (data: any) => {
+          complete: (data) => {
             const { zipFileInfoList } = data;
             if (label === 'A') {
               this.$data.zipFileInfoListA = zipFileInfoList;
@@ -260,7 +269,7 @@ export default TypedVue.typedExtend({
       };
 
       zip(data, {
-        complete: (data: any) => {
+        complete: (data) => {
           const { compressData } = data;
           File.download('diff.zip', compressData, 'application/zip');
         },
