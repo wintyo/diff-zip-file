@@ -1,5 +1,11 @@
 <template lang="pug">
 div
+  .status
+    .status__label ステータス：
+    .status__list
+      .status__list__item.-add 追加
+      .status__list__item.-change 変更
+      .status__list__item.-delete 削除
   .zip-upload
     .zip-upload__block
       div BEFORE
@@ -190,6 +196,38 @@ export default TypedVue.typedExtend({
 </script>
 
 <style lang="scss" scoped>
+$color-add: blue;
+$color-change: green;
+$color-delete: red;
+
+.status {
+  display: flex;
+
+  &__list {
+    display: flex;
+
+    &__item {
+      &:not(:last-child) {
+        &::after {
+          content: '、';
+        }
+      }
+
+      &.-add {
+        color: $color-add;
+      }
+
+      &.-change {
+        color: $color-change;
+      }
+
+      &.-delete {
+        color: $color-delete;
+      }
+    }
+  }
+}
+
 .zip-upload {
   display: flex;
   min-height: 300px;
@@ -207,15 +245,15 @@ export default TypedVue.typedExtend({
 .file-list {
   &__item {
     &.-add {
-      color: blue;
+      color: $color-add;
     }
 
     &.-change {
-      color: green;
+      color: $color-change;
     }
 
     &.-delete {
-      color: red;
+      color: $color-delete;
     }
   }
 }
