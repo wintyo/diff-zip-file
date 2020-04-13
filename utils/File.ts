@@ -7,7 +7,7 @@ class File {
    * @param {string|Uint8Array} contentStr - コンテンツの中身
    * @param {string} contentType - コンテンツのタイプ
    */
-  static download(fileName, contentStr, contentType = 'text/plain') {
+  static download(fileName: string, contentStr: string | Uint8Array, contentType = 'text/plain') {
     const data = (() => {
       if (contentType === 'text/plain' || contentType === 'text/csv') {
         return [BOM, contentStr];
