@@ -39,14 +39,14 @@ div
 
 <script lang="ts">
 import { TypedVue } from '@wintyo/typed-vue';
-const { Unzip } = require('zlibjs/bin/unzip.min').Zlib;
-const { Zip } = require('zlibjs/bin/zip.min').Zlib;
+
+// utils
 import File from '../utils/File';
-
 import { strToUtf8ByteArray } from '~/utils/converts';
+import { zip, unzip } from '~/utils/zlib';
 
-import UnzipWorker from 'worker-loader!~/worker/unzip.worker.ts';
-import ZipWorker from 'worker-loader!~/worker/zip.worker.ts';
+// interfaces
+import { IFileInfo, IDiffStatusMap } from '~/interfaces/App';
 
 /**
  * 配列データが一緒か調べる
@@ -66,74 +66,6 @@ function checkSameArray(arr1: Uint8Array, arr2: Uint8Array) {
   }
 
   return true;
-}
-
-/**
- * 解凍する
- * @param data - workerに渡すデータ
- * @param callbacks - コールバック関数群
- */
-function unzip(
-  data: { fileBinary: Uint8Array },
-  callbacks: {
-    progress?: (data: { loaded: number, total: number }) => void;
-    complete?: (data: { zipFileInfoList: Array<IFileInfo> }) => void;
-  } = {}
-) {
-  const worker = new UnzipWorker();
-  worker.addEventListener('message', (event: any) => {
-    const { status } = event.data;
-
-    if (status === 'progress') {
-      callbacks.progress && callbacks.progress(event.data);
-    }
-
-    if (status === 'complete') {
-      callbacks.complete && callbacks.complete(event.data);
-      worker.terminate();
-    }
-  });
-  worker.postMessage(data);
-}
-
-/**
- * 圧縮する
- * @param data - workerに送るデータ
- * @param callbacks - コールバック関数群
- */
-function zip(
-  data: { zipFiles: Array<{ fileName: string, binaryData: Uint8Array | Array<number> }> },
-  callbacks: {
-    progress?: (data: any) => void;
-    complete?: (data: { compressData: Uint8Array }) => void;
-  } = {}
-) {
-  const worker = new ZipWorker();
-  worker.addEventListener('message', (event: any) => {
-    const { status } = event.data;
-
-    if (status === 'progress') {
-      callbacks.progress && callbacks.progress(event.data);
-    }
-    if (status === 'complete') {
-      callbacks.complete && callbacks.complete(event.data);
-      worker.terminate();
-    }
-  });
-  worker.postMessage(data);
-}
-
-/** ファイル情報 */
-interface IFileInfo {
-  /** ファイル名 */
-  fileName: string;
-  /** バイナリデータ */
-  binaryData: Uint8Array;
-}
-
-/** 差分情報 */
-interface IDiffStatusMap {
-  [fileName: string]: 'same' | 'add' | 'change' | 'delete';
 }
 
 interface IData {
@@ -221,6 +153,9 @@ export default TypedVue.typedExtend({
 
       reader.readAsArrayBuffer(file);
     },
+    /**
+     * ダウンロードボタンをクリックした時
+     */
     onDownloadButtonClick() {
       const zipAddFiles = this.$data.zipFileInfoListB
         .filter((fileInfo) => ['add', 'change'].includes(this._diffZipFileMap[fileInfo.fileName]))
