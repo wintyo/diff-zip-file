@@ -1,6 +1,11 @@
 // @ts-ignore
 importScripts('https://cdnjs.cloudflare.com/ajax/libs/encoding-japanese/1.0.30/encoding.min.js');
 
+declare var Encoding: {
+  detect: (charCodes: Array<number>) => string;
+  convert: (charCodes: Array<number>, charCode: string) => Array<number>;
+};
+
 const { Unzip } = require('zlibjs/bin/unzip.min').Zlib;
 
 import { utf8ByteArrayToStr } from '~/utils/converts';
@@ -15,7 +20,6 @@ ctx.addEventListener('message', (event) => {
 
   const zipFileInfoList = fileNames.map((fileName, index) => {
     const charCodes = fileName.split('').map((char) => char.charCodeAt(0));
-    // @ts-ignore
     console.log('文字コード：', Encoding.detect(charCodes));
     ctx.postMessage({
       status: 'progress',
@@ -23,7 +27,6 @@ ctx.addEventListener('message', (event) => {
       total: fileNames.length,
     });
     return {
-      // @ts-ignore
       fileName: utf8ByteArrayToStr(Encoding.convert(charCodes, 'UTF8')),
       binaryData: unzip.decompress(fileName),
     };
