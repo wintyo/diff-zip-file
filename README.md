@@ -1,6 +1,8 @@
-# diff-zip-file
+# Zipファイル差分出力アプリ
 
-> My first-rate Nuxt.js project
+Zipファイルの差分を出力するアプリです。左が変更前、右が変更後で、差分だけzipファイルとしてダウンロードするものになります。
+
+https://wintyo.github.io/diff-zip-file/
 
 ## Build Setup
 
